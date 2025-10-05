@@ -37,7 +37,7 @@ public class GoogleAuthService {
     public GoogleIdTokenVerifier getVerifier() {
         if (verifier == null) {
             verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
-                    .setAudience(Collections.singleton(clientId))
+                    .setAudience(Collections.singleton(""))
                     .build();
         }
         return  verifier;

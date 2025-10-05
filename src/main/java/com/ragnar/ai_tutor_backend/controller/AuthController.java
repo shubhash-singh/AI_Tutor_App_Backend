@@ -2,6 +2,7 @@ package com.ragnar.ai_tutor_backend.controller;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.ragnar.ai_tutor_backend.model.AuthResponse;
+import com.ragnar.ai_tutor_backend.model.GoogleSignInRequest;
 import com.ragnar.ai_tutor_backend.model.User;
 import com.ragnar.ai_tutor_backend.service.GoogleAuthService;
 
@@ -10,13 +11,11 @@ import org.apache.juli.logging.Log;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.util.Map;
 import java.util.logging.Logger;
 
 @RestController  // marks it as rest controller class
@@ -34,9 +33,14 @@ public class AuthController {
     private static final Logger LOGGER = Logger.getLogger(AuthController.class.getName());
 
     // for Google sign-in and sign-up
-    @GetMapping("/google-sign-in")
-    public ResponseEntity<?> googleSignIn(@RequestBody String idToken) {
+    @PostMapping("/google-sign-in")
+    public ResponseEntity<?> googleSignIn(@RequestBody GoogleSignInRequest request) {
+        LOGGER.info("Received payload from client: " + request.toString());
+        String idToken = request.getIdToken();
 
+        if (idToken == null) {
+            return ResponseEntity.badRequest().body("Missing idToken in request body");
+        }
         try {
             GoogleIdToken.Payload payload = googleAuthService.extractPayLoad(idToken);
 
@@ -58,13 +62,13 @@ public class AuthController {
         catch (GeneralSecurityException | IOException e) {
             LOGGER.info(e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("Invalid Google Id Token" + e.getMessage());
+                    .body("Invalid Google Id Token" + e);
 
         }
         catch (Exception e) {
             LOGGER.info(e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Authentication Failed: " +e.getMessage());
+                    .body("Authentication Failed: " +e);
 
         }
     }
