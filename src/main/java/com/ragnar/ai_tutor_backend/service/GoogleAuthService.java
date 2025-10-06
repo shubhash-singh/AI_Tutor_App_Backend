@@ -14,12 +14,12 @@ import java.util.logging.Logger;
 
 /** A service class to handle google Authentication
  * 1. Creates a GoogleIdTokenVerifier
- * 3=2. Verifies the idToken provided by client
+ * 2. Verifies the idToken provided by client
  */
 @Service // annotation to mark it as a service class which tells the spring boot it is a business logic
 //  it also helps to make it as a reusable component
 public class GoogleAuthService {
-    @Value("${google.client-id}")
+    @Value("${google.client-id}") // gets the Google client id from application.properties file
     private String clientId;
 
     // Logger Instance
@@ -37,7 +37,7 @@ public class GoogleAuthService {
     public GoogleIdTokenVerifier getVerifier() {
         if (verifier == null) {
             verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
-                    .setAudience(Collections.singleton(""))
+                    .setAudience(Collections.singleton(clientId))
                     .build();
         }
         return  verifier;

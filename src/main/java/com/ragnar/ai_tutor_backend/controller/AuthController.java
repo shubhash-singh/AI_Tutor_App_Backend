@@ -4,20 +4,18 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.ragnar.ai_tutor_backend.model.AuthResponse;
 import com.ragnar.ai_tutor_backend.model.GoogleSignInRequest;
 import com.ragnar.ai_tutor_backend.model.User;
-import com.ragnar.ai_tutor_backend.repository.UserRepository;
 import com.ragnar.ai_tutor_backend.service.GoogleAuthService;
 
+import com.ragnar.ai_tutor_backend.service.JWTService;
 import com.ragnar.ai_tutor_backend.service.UserService;
-import org.apache.juli.logging.Log;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
-import java.util.List;
-import java.util.Map;
 import java.util.logging.Logger;
 
 @RestController  // marks it as rest controller class
@@ -29,10 +27,10 @@ public class AuthController {
     @Autowired
     private UserService userService;
     @Autowired
-    UserRepository userRepository;
+    private JWTService jwtService;
 
-
-
+    @Value("${google.client-id}")
+    private String clientId;
     // Logger Instance
     private static final Logger LOGGER = Logger.getLogger(AuthController.class.getName());
 
@@ -57,35 +55,52 @@ public class AuthController {
             User user = new User(googleId, email, name, photoUrl); // creates a new User object
             User savedUser = userService.saveOrUpdateUser(user); // Service class checks if user exists if exists then update else save new user
 
+            String token = jwtService.generateToken(savedUser.getId());
             // create a response message
-            AuthResponse response = new AuthResponse("token", savedUser, 3600);
+            AuthResponse response = new AuthResponse(token, savedUser, jwtService.getExpiration());
 
             return  new ResponseEntity<>(response, HttpStatus.OK);
 
         }
         catch (GeneralSecurityException | IOException e) {
-            LOGGER.info(e.getMessage());
+            LOGGER.info(e.toString());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("Invalid Google Id Token" + e);
 
         }
         catch (Exception e) {
-            LOGGER.info(e.getMessage());
+            LOGGER.info(e.toString());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Authentication Failed: " +e);
 
         }
     }
 
-    @GetMapping("/")
-    public List<User> showAllUser(){
-        return userRepository.findAll();
-    }
+    @GetMapping("/validate")
+    public ResponseEntity<?> validateToken(@RequestHeader("Authorization") String authHeader) {
+        try {
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                LOGGER.info("Invalid Authorization Header");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body("Invalid Authorization Header");
+            }
 
-    @PostMapping("/AddUser")
-    public User addUser(){
-        User user = new User("zapkto9@gmail.com", "zapkto9@gmail.com", "Shubhash Singh", "abc.com");
-        return userRepository.save(user);
-    }
+            String token = authHeader.substring(7); // initial 7 characters are Bearer and 1 space i.e. 0-6
 
+            if (jwtService.validateToken(token)) {
+                String userId = jwtService.extractUserId(token);
+                LOGGER.info("Token is valid for user: "+ userId);
+                return ResponseEntity.ok("Token is valid for user: "+ userId);
+            }
+            else {
+                LOGGER.info("Invalid or Expired Token");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body("Invalid or Expired Token");
+            }
+        } catch (Exception e) {
+            LOGGER.info(e.toString());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Validation failed. \n Message: "+ e.getMessage());
+        }
+    }
 }
