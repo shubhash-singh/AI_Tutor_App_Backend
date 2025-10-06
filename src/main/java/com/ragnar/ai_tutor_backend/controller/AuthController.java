@@ -4,6 +4,7 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.ragnar.ai_tutor_backend.model.AuthResponse;
 import com.ragnar.ai_tutor_backend.model.GoogleSignInRequest;
 import com.ragnar.ai_tutor_backend.model.User;
+import com.ragnar.ai_tutor_backend.repository.UserRepository;
 import com.ragnar.ai_tutor_backend.service.GoogleAuthService;
 
 import com.ragnar.ai_tutor_backend.service.UserService;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
@@ -26,6 +28,8 @@ public class AuthController {
     private GoogleAuthService googleAuthService;
     @Autowired
     private UserService userService;
+    @Autowired
+    UserRepository userRepository;
 
 
 
@@ -71,6 +75,17 @@ public class AuthController {
                     .body("Authentication Failed: " +e);
 
         }
+    }
+
+    @GetMapping("/")
+    public List<User> showAllUser(){
+        return userRepository.findAll();
+    }
+
+    @PostMapping("/AddUser")
+    public User addUser(){
+        User user = new User("zapkto9@gmail.com", "zapkto9@gmail.com", "Shubhash Singh", "abc.com");
+        return userRepository.save(user);
     }
 
 }
